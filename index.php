@@ -17,7 +17,14 @@
      * @return string
      */
     function getFieldValue($field) {
-        return $_POST['product'][$field] ?: '';
+        global $feedbackData;
+        global $product;
+        if (isset($feedbackData[$field])) {
+            return $product[$field];
+        } else {
+            return '';
+
+        }
     }
 
     /**
@@ -80,13 +87,68 @@
 
         if (strlen($product['sdesc']) < 20) {
             addFeedback('sdesc', 'Min. length is 20 symbols');
-            $feedbackData[] = 'Min. length is 20 symbols';
         }
 
         if (strlen($product['desc']) < 25) {
             addFeedback('desc', 'Min. length is 25 symbols');
         }
+
+        if ($product['min-price'] <= 0) {
+            addFeedback('min-price', 'Min. price must be more than 0');
+        }
+
+        if ($product['min-stay'] < 0 
+        || $product['min-stay'] > $product['max-stay'] 
+        || empty($product['min-stay'])) {
+            addFeedback('min-stay', 'Min. stay is not on available value');
+        }
+
+        if ($product['max-stay'] < 0 
+        || $product['max-stay'] < $product['max-stay'] 
+        || empty($product['min-stay'])) {
+            addFeedback('max-stay', 'Max. stay is not on available value');
+        }
+
+        if ($product['c-policy'] === "0" ) {
+            addFeedback("c-policy", 'No empty allowed');
+        }
+
+        if (strlen($product['nettwerk']) < 3 ) {
+            addFeedback("nettwerk", 'Min. length is 3 symbols');
+        }
+
+        if (strlen($product['nettwerk-pass']) < 3 ) {
+            addFeedback("nettwerk-pass", 'Password length cannot be less than 3 symbols!');
+        }
+
+        if ((stristr($product['mail'], '@') === FALSE) || (strlen($product['mail']) < 4))  {
+            addFeedback("mail", 'Email address length is not enough (3 symbols min) or symbol "@" is not here');
+        }
+
+        if(strlen($product["phone"])<7) {
+            addFeedback("phone", 'Min. length is 7 symbols');
+        }
+        
+        $symbol_validness;
+        $check_symbols = ["","0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "+", "(", ")"];
+
+        $splited = str_split($product["phone"]);
+
+        foreach ($splited as $index) {
+            foreach ($check_symbols as $symbol) {
+                $symbol_validness = 0;
+                if ($index === $symbol){
+                    $symbol_validness = 1;
+                    break;
+                }
+            }
+            if($symbol_validness===0) {
+                addFeedback("phone", 'Not allowed symbols in phone number');
+                break;
+            };
+        }
     }
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -129,29 +191,31 @@
                         <?= getFeedbackBlock('desc'); ?>
                     </div>
                 </div>
-
                 <!-- WiFi section -->
                 <div class="section-header">Restrictions</div>
                 <div class="form-row">
                     <div class="form-group col-md-6">
                         <label for="input-min-price">Min. price</label>
-                        <input type="number" class="form-control" id="input-min-price" placeholder="Min. price">
+                        <input type="number" class="form-control  <?= getFeedbackClass($feedbackData, 'min-price'); ?>" id="input-min-price"  name="product[min-price]" placeholder="Min. price" value="<?= getFieldValue('min-price')?>">
+                        <?= getFeedbackBlock('min-price'); ?>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group col-md-6">
                         <label for="input-min-stay">Min. stay</label>
-                        <input type="number" class="form-control" id="input-min-stay" placeholder="Min. stay">
+                        <input type="number" class="form-control <?= getFeedbackClass($feedbackData, 'min-stay'); ?>" id="input-min-stay" name="product[min-stay]" placeholder="Min. stay" value="<?= getFieldValue('min-stay')?>">
+                        <?= getFeedbackBlock('min-stay');?>
                     </div>
                     <div class="form-group col-md-6">
                         <label for="input-max-stay">Max. stay</label>
-                        <input type="number" class="form-control" id="input-max-stay" placeholder="Max. stay">
+                        <input type="number" class="form-control <?= getFeedbackClass($feedbackData, 'max-stay'); ?>" id="input-max-stay" name="product[max-stay]" placeholder="Max. stay" value="<?= getFieldValue('max-stay')?>">
+                        <?= getFeedbackBlock('max-stay'); ?>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group col-12">
                         <label for="select-c-policy">Cancellation Policy</label>
-                        <select class="form-control" id="select-c-policy">
+                        <select class="form-control <?= getFeedbackClass($feedbackData, 'c-policy'); ?>" id="select-c-policy" name="product[c-policy]" value="<?= getFieldValue('c-policy')?>">
                             <option value="0">Empty</option>
                             <option value="1">Flexible: Full refund 1 day prior to arrival, except fees</option>
                             <option value="3">Moderate: Full refund 5 days prior to arrival, except fees</option>
@@ -159,7 +223,9 @@
                             <option value="21">Partially Refundable</option>
                             <option value="22">Partially Refundable 14 Days prior</option>
                         </select>
+                        <?= getFeedbackBlock('c-policy'); ?>
                     </div>
+                    
                 </div>
 
                 <!-- WiFi section -->
@@ -167,13 +233,16 @@
                 <div class="form-row">
                     <div class="form-group col-md-6">
                         <label for="input-wifi-network">Network</label>
-                        <input type="text" class="form-control" id="input-wifi-network" placeholder="Network">
+                        <input type="text" class="form-control <?= getFeedbackClass($feedbackData, 'nettwerk'); ?>" name="product[nettwerk]" id="input-wifi-network" placeholder="Network" value="<?= getFieldValue('nettwerk')?>">
+                        <?= getFeedbackBlock('nettwerk'); ?>
                     </div>
 
                     <div class="form-group col-md-6">
                         <label for="input-wifi-password">Password</label>
-                        <input type="text" class="form-control" id="input-wifi-password" placeholder="Password">
+                        <input type="text" class="form-control <?= getFeedbackClass($feedbackData, 'nettwerk-pass'); ?>" name="product[nettwerk-pass]" id="input-wifi-password" placeholder="Password" value="<?= getFieldValue('nettwerk-pass')?>">
+                        <?= getFeedbackBlock('nettwerk-pass'); ?>
                     </div>
+
                 </div>
 
                 <!-- Owner info -->
@@ -181,13 +250,16 @@
                 <div class="form-row">
                     <div class="form-group col-md-6">
                         <label for="input-owner-email">Email</label>
-                        <input type="email" class="form-control" id="input-owner-email" placeholder="Owner's email">
+                        <input type="email" class="form-control <?= getFeedbackClass($feedbackData, 'mail'); ?>" id="input-owner-email" name="product[mail]" placeholder="Owner's email" value="<?= getFieldValue('mail')?>">
+                        <?= getFeedbackBlock('mail'); ?>
                     </div>
 
                     <div class="form-group col-md-6">
                         <label for="input-owner-phone">Phone</label>
-                        <input type="email" class="form-control" id="input-owner-phone" placeholder="Owner's phone">
+                        <input type="text" class="form-control <?= getFeedbackClass($feedbackData, 'phone'); ?>" id="input-owner-phone" name="product[phone]" placeholder="Owner's phone" value="<?= getFieldValue('phone')?>">
+                        <?= getFeedbackBlock('phone'); ?>
                     </div>
+                    
                 </div>
 
                 <hr>
